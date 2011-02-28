@@ -1,0 +1,14 @@
+I2C_graphical_LCD_display	KEYWORD1
+cmd	KEYWORD2
+gotoxy	KEYWORD2
+expanderWrite	KEYWORD2
+readData	KEYWORD2
+writeData	KEYWORD2
+letter	KEYWORD2
+string	KEYWORD2
+blit	KEYWORD2
+clear	KEYWORD2
+setPixel	KEYWORD2
+fillRect	KEYWORD2
+frameRect	KEYWORD2
+line	KEYWORD2
