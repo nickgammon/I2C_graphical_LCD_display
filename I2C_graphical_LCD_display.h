@@ -5,7 +5,11 @@
  Written by Nick Gammon.
  Date: 14 February 2011.
  
+ HISTORY
  
+ Version 1.0 : 15 February 2011
+ Version 1.1 : 15 February 2011  -- added write-through cache
+
  PERMISSION TO DISTRIBUTE
  
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
@@ -32,6 +36,8 @@
 
 #ifndef I2C_graphical_LCD_display_H
 #define I2C_graphical_LCD_display_H
+
+// #define WRITETHROUGH_CACHE
 
 #include "WProgram.h"
 #include <avr/pgmspace.h>
@@ -139,56 +145,61 @@
 #define LCD_OFF         0x3E
 #define LCD_SET_ADD     0x40   // plus X address (0 to 63) 
 #define LCD_SET_PAGE    0xB8   // plus Y address (0 to 7)
-#define LCD_DISP_START	0xC0   // plus X address (0 to 63) - for scrolling
+#define LCD_DISP_START  0xC0   // plus X address (0 to 63) - for scrolling
 
 class I2C_graphical_LCD_display
 {
 private:
-	
-	byte _chipSelect;  // currently-selected chip (LCD_CS1 or LCD_CS2)
-	byte _lcdx;        // current x position (0 - 127)
-	byte _lcdy;        // current y position (0 - 63)
-	
-	byte _port;        // por that the MCP23017 is on (should be 0x20 to 0x27)
+  
+  byte _chipSelect;  // currently-selected chip (LCD_CS1 or LCD_CS2)
+  byte _lcdx;        // current x position (0 - 127)
+  byte _lcdy;        // current y position (0 - 63)
+  
+  byte _port;        // por that the MCP23017 is on (should be 0x20 to 0x27)
 
-	void expanderWrite (const byte reg, const byte data);
-	byte readData ();
-	
+  void expanderWrite (const byte reg, const byte data);
+  byte readData ();
+  
+#ifdef WRITETHROUGH_CACHE
+  byte _cache [64 * 128 / 8];
+  int  _cacheOffset;
+#endif
+  
 public:
-	
-	// constructor
-	I2C_graphical_LCD_display () : _port (0x20) {};
-	
-	void begin (const byte port = 0x20, const byte i2cAddress = 0);
-	void cmd (const byte data);
-	void gotoxy (byte x, byte y);
-	void writeData (byte data, const boolean inv = false);
-	void letter (byte c, const boolean inv = false);
-	void string (const char * s, const boolean inv = false);
-	void blit (const byte * pic, const byte size);
-	void clear (const byte x1 = 0,    // start pixel
-			    const byte y1 = 0,     
-			    const byte x2 = 127,  // end pixel
-			    const byte y2 = 63,   
-			    const byte val = 0);   // what to fill with 
-	void setPixel (const byte x, const byte y, const byte val = 1);
-	void fillRect (const byte x1 = 0,   // start pixel
-				    const byte y1 = 0,     
-				    const byte x2 = 127, // end pixel
-				    const byte y2 = 63,    
-				    const byte val = 1);  // what to draw (0 = white, 1 = black) 
-	void frameRect (const byte x1 = 0,		// start pixel
-				     const byte y1 = 0,     
-				     const byte x2 = 127,	// end pixel
-				     const byte y2 = 63,    
-				     const byte val = 1,    // what to draw (0 = white, 1 = black) 
-				     const byte width = 1);
-	void line  (const byte x1 = 0,    // start pixel
-			    const byte y1 = 0,     
-			    const byte x2 = 127,  // end pixel
-			    const byte y2 = 63,   
-			    const byte val = 1);  // what to draw (0 = white, 1 = black) 
-	
+  
+  // constructor
+  I2C_graphical_LCD_display () : _port (0x20) {};
+  
+  void begin (const byte port = 0x20, const byte i2cAddress = 0);
+  void cmd (const byte data);
+  void gotoxy (byte x, byte y);
+  void writeData (byte data, const boolean inv = false);
+  void letter (byte c, const boolean inv = false);
+  void string (const char * s, const boolean inv = false);
+  void blit (const byte * pic, const byte size);
+  void clear (const byte x1 = 0,    // start pixel
+              const byte y1 = 0,     
+              const byte x2 = 127,  // end pixel
+              const byte y2 = 63,   
+              const byte val = 0);   // what to fill with 
+  void setPixel (const byte x, const byte y, const byte val = 1);
+  void fillRect (const byte x1 = 0,   // start pixel
+                const byte y1 = 0,     
+                const byte x2 = 127, // end pixel
+                const byte y2 = 63,    
+                const byte val = 1);  // what to draw (0 = white, 1 = black) 
+  void frameRect (const byte x1 = 0,    // start pixel
+                 const byte y1 = 0,     
+                 const byte x2 = 127, // end pixel
+                 const byte y2 = 63,    
+                 const byte val = 1,    // what to draw (0 = white, 1 = black) 
+                 const byte width = 1);
+  void line  (const byte x1 = 0,    // start pixel
+              const byte y1 = 0,     
+              const byte x2 = 127,  // end pixel
+              const byte y2 = 63,   
+              const byte val = 1);  // what to draw (0 = white, 1 = black) 
+  
 };
 
 #endif  // I2C_graphical_LCD_display_H
