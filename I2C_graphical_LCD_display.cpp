@@ -383,9 +383,9 @@ void I2C_graphical_LCD_display::string (const char * s,
 
 // Approx time to run: 2 ms/byte on Arduino Uno
 void I2C_graphical_LCD_display::blit (const byte * pic, 
-                                      const byte size)
+                                      const unsigned int size)
 {
-  for (byte x = 0; x < size; x++, pic++)
+  for (unsigned int x = 0; x < size; x++, pic++)
     writeData (pgm_read_byte (pic));
 }  // end of I2C_graphical_LCD_display::blit
 

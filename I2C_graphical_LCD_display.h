@@ -9,6 +9,7 @@
  
  Version 1.0 : 15 February 2011
  Version 1.1 : 15 February 2011  -- added write-through cache
+ Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
 
  PERMISSION TO DISTRIBUTE
  
@@ -176,7 +177,7 @@ public:
   void writeData (byte data, const boolean inv = false);
   void letter (byte c, const boolean inv = false);
   void string (const char * s, const boolean inv = false);
-  void blit (const byte * pic, const byte size);
+  void blit (const byte * pic, const unsigned int size);
   void clear (const byte x1 = 0,    // start pixel
               const byte y1 = 0,     
               const byte x2 = 127,  // end pixel
