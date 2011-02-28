@@ -9,8 +9,13 @@
  
  Version 1.0 : 15 February 2011
  Version 1.1 : 15 February 2011  -- added write-through cache
-
-  
+ Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
+ Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards *
+ Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
+ 
+ 
+ * These changes required hardware changes to pin configurations
+   
  PERMISSION TO DISTRIBUTE
  
  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
@@ -161,6 +166,9 @@ void I2C_graphical_LCD_display::begin (const byte port,
 {
   Wire.begin (i2cAddress);   
 
+// un-comment next line for faster I2C communications:
+//   TWBR = 12;
+
   // byte mode (not sequential)
   expanderWrite (IOCON, 0b00100000);
   
@@ -168,8 +176,16 @@ void I2C_graphical_LCD_display::begin (const byte port,
   expanderWrite (IODIRA, 0);
   expanderWrite (IODIRB, 0);
   
-  // pull enable high
+  // reset LCD chip properly
+  Wire.beginTransmission (_port);
+  Wire.send (GPIOA);        // control port
+  Wire.send (0);            // pull reset low
+  Wire.endTransmission (); 
+  delay (1);
+  
+  // now raise reset (and enable) line and wait briefly
   expanderWrite (GPIOA, LCD_ENABLE);
+  delay (1);
   
   // turn LCD chip 1 on
   _chipSelect = LCD_CS1;
@@ -183,7 +199,10 @@ void I2C_graphical_LCD_display::begin (const byte port,
   clear ();
   
   // and put the cursor in the top-left corner
-  gotoxy (0, 0);  
+  gotoxy (0, 0);
+  
+  // ensure scroll is set to zero
+  scroll (0);   
   
 }  // end of I2C_graphical_LCD_display::I2C_graphical_LCD_display (constructor)
 
@@ -194,9 +213,9 @@ void I2C_graphical_LCD_display::cmd (const byte data)
 {
   Wire.beginTransmission (_port);
   Wire.send (GPIOA);                      // control port
-  Wire.send (LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
+  Wire.send (LCD_RESET | LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
   Wire.send (data);                       // (command written to GPIOB)
-  Wire.send (_chipSelect);                // (GPIOA again) pull enable low to toggle data 
+  Wire.send (LCD_RESET | _chipSelect);    // (GPIOA again) pull enable low to toggle data 
   Wire.endTransmission (); 
 } // end of I2C_graphical_LCD_display::cmd 
 
@@ -272,12 +291,12 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
     
     Wire.beginTransmission (_port);
     Wire.send (GPIOA);                  // control port
-    Wire.send (LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+    Wire.send (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
     Wire.endTransmission (); 
     
     Wire.beginTransmission (_port);
     Wire.send (GPIOA);                  // control port
-    Wire.send (LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
+    Wire.send (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
     Wire.endTransmission (); 
     }
 
@@ -316,9 +335,9 @@ void I2C_graphical_LCD_display::writeData (byte data,
 
   Wire.beginTransmission (_port);
   Wire.send (GPIOA);                  // control port
-  Wire.send (LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+  Wire.send (LCD_RESET | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
   Wire.send (data);                   // (screen data written to GPIOB)
-  Wire.send (LCD_DATA | _chipSelect);  // (GPIOA again) pull enable low to toggle data 
+  Wire.send (LCD_RESET | LCD_DATA | _chipSelect);  // (GPIOA again) pull enable low to toggle data 
   Wire.endTransmission (); 
   
 #ifdef WRITETHROUGH_CACHE
@@ -553,3 +572,14 @@ void I2C_graphical_LCD_display::line  (const byte x1,  // start pixel
   
   
 } // end of I2C_graphical_LCD_display::line
+
+// set scroll position to y
+void I2C_graphical_LCD_display::scroll (const byte y)   // set scroll position
+{
+  byte old_cs = _chipSelect;
+  _chipSelect = LCD_CS1;
+  cmd (LCD_DISP_START | (y & 0x3F) );  // set scroll position
+  _chipSelect = LCD_CS2;
+  cmd (LCD_DISP_START | (y & 0x3F) );  // set scroll position
+  _chipSelect = old_cs;
+} // end of I2C_graphical_LCD_display::scroll
