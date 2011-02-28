@@ -10,6 +10,7 @@
  Version 1.0 : 15 February 2011
  Version 1.1 : 15 February 2011  -- added write-through cache
  Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
+ Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards
 
  PERMISSION TO DISTRIBUTE
  
@@ -81,11 +82,11 @@
  
  --- Port "A" - control lines
  
-  4      28 (GPA7)     D/~I   1 = data, 0 = instruction    (see LCD_DATA)
+  6      28 (GPA7)     E      Enable data transfer on 1 -> 0 transition  (see LCD_ENABLE)
   5      27 (GPA6)     R/~W   1 = read, 0 = write (to LCD) (see LCD_READ)
-  6      26 (GPA5)     E      Enable data transfer on 1 -> 0 transition  (see LCD_ENABLE)
- 15      25 (GPA4)     CS1    Chip select for IC1 (1 = active)  (see LCD_CS1)
- 16      24 (GPA3)     CS2    Chip select for IC2 (1 = active)  (see LCD_CS2)
+  4      26 (GPA5)     D/~I   1 = data, 0 = instruction    (see LCD_DATA)
+ 16      25 (GPA4)     CS2    Chip select for IC2 (1 = active)  (see LCD_CS2)
+ 15      24 (GPA3)     CS1    Chip select for IC1 (1 = active)  (see LCD_CS1)
  
  --- Port "B" - data lines
  
@@ -133,11 +134,11 @@
 
 // GPA port - these show which wires from the LCD are connected to which pins on the I/O expander
 
-#define LCD_DATA   0b10000000   // 1xxxxxxx = data; 0xxxxxxx = instruction  (pin 28)  0x80
+#define LCD_CS1    0b00001000   // chip select 1  (pin 24)                            0x08
+#define LCD_CS2    0b00010000   // chip select 2  (pin 25)                            0x10
+#define LCD_DATA   0b00100000   // 1xxxxxxx = data; 0xxxxxxx = instruction  (pin 26)  0x20
 #define LCD_READ   0b01000000   // x1xxxxxx = read; x0xxxxxx = write  (pin 27)        0x40
-#define LCD_ENABLE 0b00100000   // enable by toggling high/low  (pin 26)              0x20
-#define LCD_CS1    0b00010000   // chip select 1  (pin 25)                            0x10
-#define LCD_CS2    0b00001000   // chip select 2  (pin 24)                            0x08
+#define LCD_ENABLE 0b10000000   // enable by toggling high/low  (pin 28)              0x80
 
 
 // Commands sent when LCD in "instruction" mode (LCD_DATA bit set to 0)
