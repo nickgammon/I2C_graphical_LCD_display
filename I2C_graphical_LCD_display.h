@@ -12,6 +12,7 @@
  Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
  Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards *
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
+ Version 1.5 : 28 February 2011  -- added support for SPI interface
  
  
  * These changes required hardware changes to pin configurations
@@ -121,10 +122,10 @@
  
   9   (VDD)            +5V    Power for MCP23017
  10   (VSS)            GND    Ground for MCP23017
- 11   (NC)             Not used
- 12   (SCL)            SCL (SPI clock) - connect to Arduino pin A5
- 13   (SDA)            SDA (SPI data)  - connect to Arduino pin A4
- 14   (NC)             Not used
+ 11   (CS)             SS     (Slave Select) - connect to Arduino pin D10 if using SPI
+ 12   (SCL/SCK)        SCL    (Clock) - connect to Arduino pin A5 for I2C (or D13 for SPI SCK)
+ 13   (SDA/SI)         SDA    (Data)  - connect to Arduino pin A4 for I2C (or D11 for SPI MOSI)
+ 14   (SO)             MISO   (SPI slave out) - connect to Arduino pin D12 if using SPI
  15   (A0)             Address jumper 0 - connect to ground (unless you want a different address)
  16   (A1)             Address jumper 1 - connect to ground
  17   (A2)             Address jumper 2 - connect to ground
@@ -164,10 +165,15 @@ private:
   byte _lcdx;        // current x position (0 - 127)
   byte _lcdy;        // current y position (0 - 63)
   
-  byte _port;        // por that the MCP23017 is on (should be 0x20 to 0x27)
+  byte _port;        // port that the MCP23017 is on (should be 0x20 to 0x27)
+  byte _ssPin;       // if non-zero use SPI rather than I2C (and this is the SS pin)
 
   void expanderWrite (const byte reg, const byte data);
   byte readData ();
+  void startSend ();    // prepare for sending to MCP23017  (eg. set SS low)
+  void doSend (const byte what);  // send a byte to the MCP23017
+  void endSend ();      // finished sending  (eg. set SS high)
+  
   
 #ifdef WRITETHROUGH_CACHE
   byte _cache [64 * 128 / 8];
@@ -177,9 +183,9 @@ private:
 public:
   
   // constructor
-  I2C_graphical_LCD_display () : _port (0x20) {};
+  I2C_graphical_LCD_display () : _port (0x20), _ssPin (10) {};
   
-  void begin (const byte port = 0x20, const byte i2cAddress = 0);
+  void begin (const byte port = 0x20, const byte i2cAddress = 0, const byte ssPin = 10);
   void cmd (const byte data);
   void gotoxy (byte x, byte y);
   void writeData (byte data, const boolean inv = false);

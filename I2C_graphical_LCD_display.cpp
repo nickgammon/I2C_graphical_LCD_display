@@ -12,6 +12,7 @@
  Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
  Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards *
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
+ Version 1.5 : 28 February 2011  -- added support for SPI interface
  
  
  * These changes required hardware changes to pin configurations
@@ -41,11 +42,17 @@
 
 // WARNING: Put this following line into your main program or you will get compiler errors:
 #include <Wire.h>
-
+#include <SPI.h>
 
 #include <WProgram.h>
 #include <avr/pgmspace.h>
 #include "I2C_graphical_LCD_display.h"
+
+// SPI is so fast we need to give the LCD time to catch up.
+// This is the number of microseconds we wait. Something like 20 to 50 is probably reasonable.
+//  Increase this value if the display is either not working, or losing data.
+
+#define LCD_BUSY_DELAY 20   // microseconds
 
 // font data - each character is 8 pixels deep and 5 pixels wide
 
@@ -154,17 +161,62 @@ byte font [96] [5] PROGMEM = {
   
 };
 
+// prepare for sending to MCP23017 
+void I2C_graphical_LCD_display::startSend ()   
+{
+  
+  if (_ssPin)
+    {
+    delayMicroseconds (LCD_BUSY_DELAY);
+    digitalWrite (_ssPin, LOW); 
+    SPI.transfer (_port << 1);
+    }
+  else
+    Wire.beginTransmission (_port);
+  
+}  // end of I2C_graphical_LCD_display::startSend
+
+// send a byte via SPI or I2C
+void I2C_graphical_LCD_display::doSend (const byte what)   
+{
+  if (_ssPin)
+    SPI.transfer (what);
+  else
+    Wire.send (what);
+}  // end of I2C_graphical_LCD_display::doSend
+
+// finish sending to MCP23017 
+void I2C_graphical_LCD_display::endSend ()   
+{
+  if (_ssPin)
+    digitalWrite (_ssPin, HIGH); 
+  else
+    Wire.endTransmission ();
+ 
+}  // end of I2C_graphical_LCD_display::endSend
+
 
 // set up - call before using
-// specify the port that the MCP23017 is on (default 0x20)
-// and the i2c port (default 0)
+// specify 
+//  * the port that the MCP23017 is on (default 0x20)
+//  * the i2c port (default 0)
+//  * the SPI SS (slave select) pin - leave as default of zero for I2C operation
+
 // turns LCD on, clears memory, sets the cursor to 0,0
 
 // Approx time to run: 600 ms on Arduino Uno
 void I2C_graphical_LCD_display::begin (const byte port, 
-                                       const byte i2cAddress)
+                                       const byte i2cAddress,
+                                       const byte ssPin)
 {
-  Wire.begin (i2cAddress);   
+  
+  _port = port;   // remember port
+  _ssPin = ssPin; // and SPI slave select pin
+  
+  if (_ssPin)
+    SPI.begin ();
+  else
+    Wire.begin (i2cAddress);   
 
 // un-comment next line for faster I2C communications:
 //   TWBR = 12;
@@ -176,15 +228,14 @@ void I2C_graphical_LCD_display::begin (const byte port,
   expanderWrite (IODIRA, 0);
   expanderWrite (IODIRB, 0);
   
-  // reset LCD chip properly
-  Wire.beginTransmission (_port);
-  Wire.send (GPIOA);        // control port
-  Wire.send (0);            // pull reset low
-  Wire.endTransmission (); 
-  delay (1);
+  // take reset line low
+  startSend ();
+    doSend (GPIOA);
+    doSend (0); // all lines low
+  endSend ();
   
   // now raise reset (and enable) line and wait briefly
-  expanderWrite (GPIOA, LCD_ENABLE);
+  expanderWrite (GPIOA, LCD_ENABLE | LCD_RESET);
   delay (1);
   
   // turn LCD chip 1 on
@@ -211,12 +262,12 @@ void I2C_graphical_LCD_display::begin (const byte port,
 // for example, setting page (Y) or address (X)
 void I2C_graphical_LCD_display::cmd (const byte data)
 {
-  Wire.beginTransmission (_port);
-  Wire.send (GPIOA);                      // control port
-  Wire.send (LCD_RESET | LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
-  Wire.send (data);                       // (command written to GPIOB)
-  Wire.send (LCD_RESET | _chipSelect);    // (GPIOA again) pull enable low to toggle data 
-  Wire.endTransmission (); 
+  startSend ();
+    doSend (GPIOA);                      // control port
+    doSend(LCD_RESET | LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
+    doSend (data);                       // (command written to GPIOB)
+    doSend (LCD_RESET | _chipSelect);    // (GPIOA again) pull enable low to toggle data 
+  endSend ();
 } // end of I2C_graphical_LCD_display::cmd 
 
 // set our "cursor" to the x/y position
@@ -268,10 +319,10 @@ void I2C_graphical_LCD_display::gotoxy (byte x,
 void I2C_graphical_LCD_display::expanderWrite (const byte reg, 
                                                const byte data ) 
 {
-  Wire.beginTransmission (_port);
-  Wire.send (reg);
-  Wire.send (data);
-  Wire.endTransmission ();
+  startSend ();
+    doSend (reg);
+    doSend (data);
+  endSend ();
 } // end of I2C_graphical_LCD_display::expanderWrite
 
 // read the byte corresponding to the selected x,y position
@@ -288,24 +339,35 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
   // lol, see the KS0108 spec sheet - you need to read twice to get the data
   for (int i = 0; i < 2; i++)
     {
-    
-    Wire.beginTransmission (_port);
-    Wire.send (GPIOA);                  // control port
-    Wire.send (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
-    Wire.endTransmission (); 
-    
-    Wire.beginTransmission (_port);
-    Wire.send (GPIOA);                  // control port
-    Wire.send (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
-    Wire.endTransmission (); 
-    }
+    startSend ();
+      doSend (GPIOA);                  // control port
+      doSend (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+    endSend ();
 
-  // initiate blocking read into internal buffer
-  Wire.requestFrom (_port, (byte) 1);
+    startSend ();
+      doSend (GPIOA);                  // control port
+      doSend (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
+    endSend ();
+    }
   
-  // don't bother checking if available, Wire.receive does that anyway
-  //  also it returns 0x00 if nothing there, so we don't need to bother doing that
-  byte data = Wire.receive();
+  byte data;
+
+  if (_ssPin)
+    {
+    digitalWrite(_ssPin, LOW); 
+    SPI.transfer ((_port << 1) | 1);  // read operation has low-bit set
+    data = SPI.transfer (0);          // get byte back
+    digitalWrite(_ssPin, HIGH); 
+    }
+  else
+    {
+    // initiate blocking read into internal buffer
+    Wire.requestFrom (_port, (byte) 1);
+    
+    // don't bother checking if available, Wire.receive does that anyway
+    //  also it returns 0x00 if nothing there, so we don't need to bother doing that
+    data = Wire.receive();
+    }  
   
   // data port (on the MCP23017) is now output again
   expanderWrite (IODIRB, 0);
@@ -333,13 +395,13 @@ void I2C_graphical_LCD_display::writeData (byte data,
   //   3. Port B: send the data byte
   //   4. Port A: set E low to toggle the transfer of data
 
-  Wire.beginTransmission (_port);
-  Wire.send (GPIOA);                  // control port
-  Wire.send (LCD_RESET | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
-  Wire.send (data);                   // (screen data written to GPIOB)
-  Wire.send (LCD_RESET | LCD_DATA | _chipSelect);  // (GPIOA again) pull enable low to toggle data 
-  Wire.endTransmission (); 
-  
+  startSend ();
+    doSend (GPIOA);                  // control port
+    doSend (LCD_RESET | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+    doSend (data);                   // (screen data written to GPIOB)
+    doSend (LCD_RESET | LCD_DATA | _chipSelect);  // (GPIOA again) pull enable low to toggle data 
+  endSend ();
+
 #ifdef WRITETHROUGH_CACHE
   _cache [_cacheOffset] = data;
 #endif 
