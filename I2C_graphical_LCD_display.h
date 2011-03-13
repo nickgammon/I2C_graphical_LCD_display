@@ -13,6 +13,7 @@
  Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards *
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
  Version 1.5 : 28 February 2011  -- added support for SPI interface
+ Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
  
  
  * These changes required hardware changes to pin configurations
@@ -122,10 +123,10 @@
  
   9   (VDD)            +5V    Power for MCP23017
  10   (VSS)            GND    Ground for MCP23017
- 11   (CS)             SS     (Slave Select) - connect to Arduino pin D10 if using SPI
- 12   (SCL/SCK)        SCL    (Clock) - connect to Arduino pin A5 for I2C (or D13 for SPI SCK)
- 13   (SDA/SI)         SDA    (Data)  - connect to Arduino pin A4 for I2C (or D11 for SPI MOSI)
- 14   (SO)             MISO   (SPI slave out) - connect to Arduino pin D12 if using SPI
+ 11   (CS)             SS     (Slave Select) - connect to Arduino pin D10 if using SPI (D53 on the Mega)
+ 12   (SCL/SCK)        SCL    (Clock) - connect to Arduino pin A5 for I2C (D21 on the Mega) (for SPI SCK: D13, or D52 on the Mega)
+ 13   (SDA/SI)         SDA    (Data)  - connect to Arduino pin A4 for I2C (D20 on the Mega) (for SPI MOSI: D11, or D51 on the Mega)
+ 14   (SO)             MISO   (SPI slave out) - connect to Arduino pin D12 if using SPI (D50 on the Mega)
  15   (A0)             Address jumper 0 - connect to ground (unless you want a different address)
  16   (A1)             Address jumper 1 - connect to ground
  17   (A2)             Address jumper 2 - connect to ground

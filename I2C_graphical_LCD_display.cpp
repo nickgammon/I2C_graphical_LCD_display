@@ -13,6 +13,7 @@
  Version 1.3 : 21 February 2011  -- swapped some pins around to make it easier to make circuit boards *
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
  Version 1.5 : 28 February 2011  -- added support for SPI interface
+ Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
  
  
  * These changes required hardware changes to pin configurations
@@ -264,7 +265,7 @@ void I2C_graphical_LCD_display::cmd (const byte data)
 {
   startSend ();
     doSend (GPIOA);                      // control port
-    doSend(LCD_RESET | LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
+    doSend (LCD_RESET | LCD_ENABLE | _chipSelect);   // set enable high (D/I is low meaning instruction) 
     doSend (data);                       // (command written to GPIOB)
     doSend (LCD_RESET | _chipSelect);    // (GPIOA again) pull enable low to toggle data 
   endSend ();
@@ -354,10 +355,11 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
 
   if (_ssPin)
     {
-    digitalWrite(_ssPin, LOW); 
+    digitalWrite (_ssPin, LOW); 
     SPI.transfer ((_port << 1) | 1);  // read operation has low-bit set
+    SPI.transfer (GPIOB);             // which register to read from
     data = SPI.transfer (0);          // get byte back
-    digitalWrite(_ssPin, HIGH); 
+    digitalWrite (_ssPin, HIGH); 
     }
   else
     {
@@ -366,7 +368,7 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
     
     // don't bother checking if available, Wire.receive does that anyway
     //  also it returns 0x00 if nothing there, so we don't need to bother doing that
-    data = Wire.receive();
+    data = Wire.receive ();
     }  
   
   // data port (on the MCP23017) is now output again
