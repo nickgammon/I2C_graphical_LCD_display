@@ -14,6 +14,7 @@
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
  Version 1.5 : 28 February 2011  -- added support for SPI interface
  Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
+ Version 1.7 : 13 April 2011     -- made the bitmap for letter "Q" look a bit better
  
  
  * These changes required hardware changes to pin configurations
@@ -110,7 +111,7 @@ byte font [96] [5] PROGMEM = {
   { 0x3E, 0x41, 0x41, 0x41, 0x3E }, // O
   
   { 0x3F, 0x09, 0x09, 0x09, 0x06 }, // P  (0x50)
-  { 0x3F, 0x41, 0x51, 0x21, 0x5E }, // Q
+  { 0x3E, 0x41, 0x51, 0x21, 0x5E }, // Q
   { 0x7F, 0x09, 0x19, 0x29, 0x46 }, // R
   { 0x46, 0x49, 0x49, 0x49, 0x31 }, // S
   { 0x01, 0x01, 0x7F, 0x01, 0x01 }, // T
