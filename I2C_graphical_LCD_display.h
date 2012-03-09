@@ -14,6 +14,8 @@
  Version 1.4 : 24 February 2011  -- added code to raise reset line properly, also scrolling code *
  Version 1.5 : 28 February 2011  -- added support for SPI interface
  Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
+ Version 1.7 : 13 April 2011     -- made the bitmap for letter "Q" look a bit better
+ Version 1.8 : 10 March 2012     -- adapted to work on Arduino IDE 1.0 onwards
  
  
  * These changes required hardware changes to pin configurations
@@ -48,7 +50,12 @@
 
 // #define WRITETHROUGH_CACHE
 
-#include "WProgram.h"
+#if defined(ARDUINO) && ARDUINO >= 100
+  #include "Arduino.h"
+#else
+  #include <WProgram.h>
+#endif
+
 #include <avr/pgmspace.h>
 
 // MCP23017 registers (everything except direction defaults to 0)

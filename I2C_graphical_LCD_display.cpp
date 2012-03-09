@@ -15,6 +15,7 @@
  Version 1.5 : 28 February 2011  -- added support for SPI interface
  Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
  Version 1.7 : 13 April 2011     -- made the bitmap for letter "Q" look a bit better
+ Version 1.8 : 10 March 2012     -- adapted to work on Arduino IDE 1.0 onwards
  
  
  * These changes required hardware changes to pin configurations
@@ -42,13 +43,12 @@
  
  */
 
+
+#include "I2C_graphical_LCD_display.h"
+
 // WARNING: Put this following line into your main program or you will get compiler errors:
 #include <Wire.h>
 #include <SPI.h>
-
-#include <WProgram.h>
-#include <avr/pgmspace.h>
-#include "I2C_graphical_LCD_display.h"
 
 // SPI is so fast we need to give the LCD time to catch up.
 // This is the number of microseconds we wait. Something like 20 to 50 is probably reasonable.
@@ -163,6 +163,26 @@ byte font [96] [5] PROGMEM = {
   
 };
 
+// glue routines for version 1.0+ of the IDE
+uint8_t i2c_read ()
+{
+#if defined(ARDUINO) && ARDUINO >= 100
+  return Wire.read ();
+#else
+  return Wire.receive ();
+#endif
+} // end of Nunchuk::i2c_read
+
+void i2c_write (int data)
+{
+#if defined(ARDUINO) && ARDUINO >= 100
+  Wire.write (data);
+#else
+  Wire.send (data);
+#endif
+} // end of Nunchuk::i2c_write
+
+
 // prepare for sending to MCP23017 
 void I2C_graphical_LCD_display::startSend ()   
 {
@@ -184,7 +204,7 @@ void I2C_graphical_LCD_display::doSend (const byte what)
   if (_ssPin)
     SPI.transfer (what);
   else
-    Wire.send (what);
+    i2c_write (what);
 }  // end of I2C_graphical_LCD_display::doSend
 
 // finish sending to MCP23017 
@@ -369,7 +389,7 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
     
     // don't bother checking if available, Wire.receive does that anyway
     //  also it returns 0x00 if nothing there, so we don't need to bother doing that
-    data = Wire.receive ();
+    data = i2c_read ();
     }  
   
   // data port (on the MCP23017) is now output again
