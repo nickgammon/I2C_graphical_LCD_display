@@ -193,7 +193,7 @@ public:
   // constructor
   I2C_graphical_LCD_display () : _port (0x20), _ssPin (10) {};
   
-  void begin (const byte port = 0x20, const byte i2cAddress = 0, const byte ssPin = 10);
+  void begin (const byte port = 0x20, const byte i2cAddress = 0, const byte ssPin = 0);
   void cmd (const byte data);
   void gotoxy (byte x, byte y);
   void writeData (byte data, const boolean inv = false);
