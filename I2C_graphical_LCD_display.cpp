@@ -18,6 +18,7 @@
  Version 1.8 : 10 March 2012     -- adapted to work on Arduino IDE 1.0 onwards
  Version 1.9 : 26 May 2012       -- default to I2C rather than SPI on the begin() function
                                  -- also increased initial LCD_BUSY_DELAY from 20 to 50 uS
+ Version 1.10:  8 July 2012      -- fixed issue with dropping enable before reading from display
  
  
  * These changes required hardware changes to pin configurations
@@ -361,19 +362,21 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
   expanderWrite (IODIRB, 0xFF);
   
   // lol, see the KS0108 spec sheet - you need to read twice to get the data
-  for (int i = 0; i < 2; i++)
-    {
-    startSend ();
-      doSend (GPIOA);                  // control port
-      doSend (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
-    endSend ();
+  startSend ();
+    doSend (GPIOA);                  // control port
+    doSend (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+  endSend ();
 
-    startSend ();
-      doSend (GPIOA);                  // control port
-      doSend (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
-    endSend ();
-    }
-  
+  startSend ();
+    doSend (GPIOA);                  // control port
+    doSend (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
+  endSend ();
+
+  startSend ();
+  doSend (GPIOA);                  // control port
+  doSend (LCD_RESET | LCD_READ | LCD_DATA | LCD_ENABLE | _chipSelect);  // set enable high 
+  endSend ();
+
   byte data;
 
   if (_ssPin)
@@ -393,7 +396,13 @@ byte I2C_graphical_LCD_display::I2C_graphical_LCD_display::readData ()
     //  also it returns 0x00 if nothing there, so we don't need to bother doing that
     data = i2c_read ();
     }  
-  
+
+  // drop enable AFTER we have read it
+  startSend ();
+  doSend (GPIOA);                  // control port
+  doSend (LCD_RESET | LCD_READ | LCD_DATA | _chipSelect);  // pull enable low to toggle data 
+  endSend ();
+
   // data port (on the MCP23017) is now output again
   expanderWrite (IODIRB, 0);
   
