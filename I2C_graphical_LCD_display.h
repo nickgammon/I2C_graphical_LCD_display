@@ -16,6 +16,9 @@
  Version 1.6 : 13 March 2011     -- fixed bug in reading data from SPI interface
  Version 1.7 : 13 April 2011     -- made the bitmap for letter "Q" look a bit better
  Version 1.8 : 10 March 2012     -- adapted to work on Arduino IDE 1.0 onwards
+ Version 1.9 : 26 May 2012       -- default to I2C rather than SPI on the begin() function
+ -- also increased initial LCD_BUSY_DELAY from 20 to 50 uS
+ Version 1.10:  8 July 2012      -- fixed issue with dropping enable before reading from display
  
  
  * These changes required hardware changes to pin configurations
