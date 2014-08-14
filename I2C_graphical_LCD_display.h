@@ -19,7 +19,7 @@
  Version 1.9 : 26 May 2012       -- default to I2C rather than SPI on the begin() function
  -- also increased initial LCD_BUSY_DELAY from 20 to 50 uS
  Version 1.10:  8 July 2012      -- fixed issue with dropping enable before reading from display
- 
+ Version 1.11: 15 August 2014    -- added support for Print class
  
  * These changes required hardware changes to pin configurations
  
@@ -168,7 +168,7 @@
 #define LCD_SET_PAGE    0xB8   // plus Y address (0 to 7)
 #define LCD_DISP_START  0xC0   // plus X address (0 to 63) - for scrolling
 
-class I2C_graphical_LCD_display
+class I2C_graphical_LCD_display : public Print
 {
 private:
   
@@ -184,6 +184,8 @@ private:
   void startSend ();    // prepare for sending to MCP23017  (eg. set SS low)
   void doSend (const byte what);  // send a byte to the MCP23017
   void endSend ();      // finished sending  (eg. set SS high)
+
+  boolean _invmode;
   
   
 #ifdef WRITETHROUGH_CACHE
@@ -194,14 +196,17 @@ private:
 public:
   
   // constructor
-  I2C_graphical_LCD_display () : _port (0x20), _ssPin (10) {};
+  I2C_graphical_LCD_display () : _port (0x20), _ssPin (10), _invmode(false) {};
   
   void begin (const byte port = 0x20, const byte i2cAddress = 0, const byte ssPin = 0);
   void cmd (const byte data);
   void gotoxy (byte x, byte y);
-  void writeData (byte data, const boolean inv = false);
-  void letter (byte c, const boolean inv = false);
-  void string (const char * s, const boolean inv = false);
+  void writeData (byte data, const boolean inv);
+  void writeData (byte data) { writeData(data, _invmode);}
+  void letter (byte c, const boolean inv);
+  void letter (byte c) {letter(c, _invmode);}
+  void string (const char * s, const boolean inv);
+  void string (const char * s) {string(s, _invmode);}
   void blit (const byte * pic, const unsigned int size);
   void clear (const byte x1 = 0,    // start pixel
               const byte y1 = 0,     
@@ -226,6 +231,14 @@ public:
               const byte y2 = 63,   
               const byte val = 1);  // what to draw (0 = white, 1 = black) 
   void scroll (const byte y = 0);   // set scroll position
+
+#if defined(ARDUINO) && ARDUINO >= 100
+	size_t write(uint8_t c) {letter(c, _invmode); return 1; }
+#else
+	void write(uint8_t c) { letter(c, _invmode); }
+#endif
+
+  void setInv(boolean inv) {_invmode = inv;} // set inverse mode state true == inverse
   
 };
 
