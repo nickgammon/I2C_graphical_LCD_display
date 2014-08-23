@@ -19,7 +19,7 @@
  Version 1.9 : 26 May 2012       -- default to I2C rather than SPI on the begin() function
  -- also increased initial LCD_BUSY_DELAY from 20 to 50 uS
  Version 1.10:  8 July 2012      -- fixed issue with dropping enable before reading from display
- Version 1.11: 15 August 2014    -- added support for Print class
+ Version 1.11: 15 August 2014    -- added support for Print class, and an inverse mode
  
  * These changes required hardware changes to pin configurations
  
