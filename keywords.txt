@@ -12,4 +12,4 @@ setPixel	KEYWORD2
 fillRect	KEYWORD2
 frameRect	KEYWORD2
 line	KEYWORD2
-scroll KEYWORD2
+scroll	KEYWORD2
