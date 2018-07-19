@@ -9,7 +9,12 @@ string	KEYWORD2
 blit	KEYWORD2
 clear	KEYWORD2
 setPixel	KEYWORD2
+getPixel	KEYWORD2
 fillRect	KEYWORD2
 frameRect	KEYWORD2
 line	KEYWORD2
-scroll KEYWORD2
+scroll	KEYWORD2
+lighton	KEYWORD2
+lightoff	KEYWORD2
+waitnobusy	KEYWORD2
+readStatus	KEYWORD2

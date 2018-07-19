@@ -1,12 +1,12 @@
 /*
  I2C_graphical_LCD_display.h
- 
- 
+
+
  Written by Nick Gammon.
  Date: 14 February 2011.
- 
+
  HISTORY
- 
+
  Version 1.0 : 15 February 2011
  Version 1.1 : 15 February 2011  -- added write-through cache
  Version 1.2 : 19 February 2011  -- allowed for more than 256 bytes in lcd.blit
@@ -20,31 +20,33 @@
  -- also increased initial LCD_BUSY_DELAY from 20 to 50 uS
  Version 1.10:  8 July 2012      -- fixed issue with dropping enable before reading from display
  Version 1.11: 15 August 2014    -- added support for Print class, and an inverse mode
- 
+ Version 1.12: 19 July 2018      -- added getPixel, lighton, lightoff, readStatus, waitnobusy. Changed WriteData algorithm. Pins changed to support extender from Aliexpress. Some code optimization *
+
+
  * These changes required hardware changes to pin configurations
- 
+
 
  PERMISSION TO DISTRIBUTE
- 
- Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
- and associated documentation files (the "Software"), to deal in the Software without restriction, 
- including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+ and associated documentation files (the "Software"), to deal in the Software without restriction,
+ including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
  subject to the following conditions:
- 
- The above copyright notice and this permission notice shall be included in 
+
+ The above copyright notice and this permission notice shall be included in
  all copies or substantial portions of the Software.
- 
- 
+
+
  LIMITATION OF LIABILITY
- 
- The software is provided "as is", without warranty of any kind, express or implied, 
- including but not limited to the warranties of merchantability, fitness for a particular 
- purpose and noninfringement. In no event shall the authors or copyright holders be liable 
- for any claim, damages or other liability, whether in an action of contract, 
- tort or otherwise, arising from, out of or in connection with the software 
- or the use or other dealings in the software. 
- 
+
+ The software is provided "as is", without warranty of any kind, express or implied,
+ including but not limited to the warranties of merchantability, fitness for a particular
+ purpose and noninfringement. In no event shall the authors or copyright holders be liable
+ for any claim, damages or other liability, whether in an action of contract,
+ tort or otherwise, arising from, out of or in connection with the software
+ or the use or other dealings in the software.
+
  */
 
 
@@ -83,31 +85,31 @@
 #define INTCAPB  0x11
 #define GPIOA    0x12   // Port value. Write to change, read to obtain value
 #define GPIOB    0x13
-#define OLLATA   0x14   // Output latch. Write to latch output.
-#define OLLATB   0x15
+#define OLATA    0x14   // Output latch. Write to latch output.
+#define OLATB    0x15
 
 
 
 /*
 
  My mappings of the KS0108 registers:
- 
+
 
  LCD PIN  MCP23017 PIN  Name   Purpose
- 
+
  ---- Wire these pins together as shown ------
- 
+
  --- Port "A" - control lines
- 
+
   6      28 (GPA7)     E      Enable data transfer on 1 -> 0 transition  (see LCD_ENABLE)
   5      27 (GPA6)     R/~W   1 = read, 0 = write (to LCD) (see LCD_READ)
   4      26 (GPA5)     D/~I   1 = data, 0 = instruction    (see LCD_DATA)
  17      25 (GPA4)     ~RST   1 = not reset, 0 = reset
  16      24 (GPA3)     CS2    Chip select for IC2 (1 = active)  (see LCD_CS2)
  15      23 (GPA2)     CS1    Chip select for IC1 (1 = active)  (see LCD_CS1)
- 
+
  --- Port "B" - data lines
- 
+
   7      1  (GPB0)     DB0    Data bit 0
   8      2  (GPB1)     DB1    Data bit 1
   9      3  (GPB2)     DB2    Data bit 2
@@ -116,9 +118,9 @@
  12      6  (GPB5)     DB5    Data bit 5
  13      7  (GPB6)     DB6    Data bit 6
  14      8  (GPB7)     DB7    Data bit 7
- 
+
  ---- Pins on LCD display which are not connected to the I/O expander ----
- 
+
   1                    GND    LCD logic ground
   2                    +5V    LCD logic power
   3                    V0     Contrast - connect to contrast pot, middle (wiper)
@@ -126,11 +128,11 @@
  18                    Vee    Negative voltage - connect to contrast pot, one side *
  19                    A      Power supply for LED light (+5V)  A=anode
  20                    K      GND for LED light                 K=cathode
- 
+
  * Third leg of contrast pot is wired to ground.
- 
+
  ---- Pins on MCP23017 which are not connected to the LCD display ----
- 
+
   9   (VDD)            +5V    Power for MCP23017
  10   (VSS)            GND    Ground for MCP23017
  11   (CS)             SS     (Slave Select) - connect to Arduino pin D10 if using SPI (D53 on the Mega)
@@ -146,59 +148,64 @@
  21   (GPA0)           Not used
  22   (GPA1)           Not used
  23   (GPA2)           Not used
- 
+
  */
 
 
 // GPA port - these show which wires from the LCD are connected to which pins on the I/O expander
 
-#define LCD_CS1    0b00000100   // chip select 1  (pin 23)                            0x04
+#define LCD_CS1    0b00010000   // chip select 1  (pin 25)                            0x10
 #define LCD_CS2    0b00001000   // chip select 2  (pin 24)                            0x08
-#define LCD_RESET  0b00010000   // reset (pin 25)                                     0x10
-#define LCD_DATA   0b00100000   // 1xxxxxxx = data; 0xxxxxxx = instruction  (pin 26)  0x20
+#define LCD_RESET  0b00000100   // reset (pin 23)                                     0x04
+#define LCD_DATA   0b10000000   // 1xxxxxxx = data; 0xxxxxxx = instruction  (pin 28)  0x80
 #define LCD_READ   0b01000000   // x1xxxxxx = read; x0xxxxxx = write  (pin 27)        0x40
-#define LCD_ENABLE 0b10000000   // enable by toggling high/low  (pin 28)              0x80
+#define LCD_ENABLE 0b00100000   // enable by toggling high/low  (pin 26)              0x20
+#define LCD_LIGHT  0b00000010   // LED light enable by toggling high/low  (pin 22)    0x02
 
 
 // Commands sent when LCD in "instruction" mode (LCD_DATA bit set to 0)
 
 #define LCD_ON          0x3F
 #define LCD_OFF         0x3E
-#define LCD_SET_ADD     0x40   // plus X address (0 to 63) 
+#define LCD_SET_ADD     0x40   // plus X address (0 to 63)
 #define LCD_SET_PAGE    0xB8   // plus Y address (0 to 7)
 #define LCD_DISP_START  0xC0   // plus X address (0 to 63) - for scrolling
 
 class I2C_graphical_LCD_display : public Print
 {
 private:
-  
+
   byte _chipSelect;  // currently-selected chip (LCD_CS1 or LCD_CS2)
   byte _lcdx;        // current x position (0 - 127)
   byte _lcdy;        // current y position (0 - 63)
-  
+
   byte _port;        // port that the MCP23017 is on (should be 0x20 to 0x27)
   byte _ssPin;       // if non-zero use SPI rather than I2C (and this is the SS pin)
 
   void expanderWrite (const byte reg, const byte data);
-  byte readData ();
   void startSend ();    // prepare for sending to MCP23017  (eg. set SS low)
   void doSend (const byte what);  // send a byte to the MCP23017
   void endSend ();      // finished sending  (eg. set SS high)
 
   boolean _invmode;
-  
-  
+
+
 #ifdef WRITETHROUGH_CACHE
   byte _cache [64 * 128 / 8];
   int  _cacheOffset;
 #endif
-  
+
 public:
-  
+
   // constructor
   I2C_graphical_LCD_display () : _port (0x20), _ssPin (10), _invmode(false) {};
-  
+
+  byte readData ();
+  byte readStatus ();
+  void waitnobusy();
   void begin (const byte port = 0x20, const byte i2cAddress = 0, const byte ssPin = 0);
+  void lighton ();
+  void lightoff ();
   void cmd (const byte data);
   void gotoxy (byte x, byte y);
   void writeData (byte data, const boolean inv);
@@ -209,27 +216,28 @@ public:
   void string (const char * s) {string(s, _invmode);}
   void blit (const byte * pic, const unsigned int size);
   void clear (const byte x1 = 0,    // start pixel
-              const byte y1 = 0,     
+              const byte y1 = 0,
               const byte x2 = 127,  // end pixel
-              const byte y2 = 63,   
-              const byte val = 0);   // what to fill with 
+              const byte y2 = 63,
+              const byte val = 0);   // what to fill with
   void setPixel (const byte x, const byte y, const byte val = 1);
+  boolean getPixel (const byte x, const byte y);
   void fillRect (const byte x1 = 0,   // start pixel
-                const byte y1 = 0,     
+                const byte y1 = 0,
                 const byte x2 = 127, // end pixel
-                const byte y2 = 63,    
-                const byte val = 1);  // what to draw (0 = white, 1 = black) 
+                const byte y2 = 63,
+                const byte val = 1);  // what to draw (0 = white, 1 = black)
   void frameRect (const byte x1 = 0,    // start pixel
-                 const byte y1 = 0,     
+                 const byte y1 = 0,
                  const byte x2 = 127, // end pixel
-                 const byte y2 = 63,    
-                 const byte val = 1,    // what to draw (0 = white, 1 = black) 
+                 const byte y2 = 63,
+                 const byte val = 1,    // what to draw (0 = white, 1 = black)
                  const byte width = 1);
   void line  (const byte x1 = 0,    // start pixel
-              const byte y1 = 0,     
+              const byte y1 = 0,
               const byte x2 = 127,  // end pixel
-              const byte y2 = 63,   
-              const byte val = 1);  // what to draw (0 = white, 1 = black) 
+              const byte y2 = 63,
+              const byte val = 1);  // what to draw (0 = white, 1 = black)
   void scroll (const byte y = 0);   // set scroll position
 
 #if defined(ARDUINO) && ARDUINO >= 100
@@ -239,7 +247,7 @@ public:
 #endif
 
   void setInv(boolean inv) {_invmode = inv;} // set inverse mode state true == inverse
-  
+
 };
 
 #endif  // I2C_graphical_LCD_display_H
