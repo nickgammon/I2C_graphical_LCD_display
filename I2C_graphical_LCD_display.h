@@ -52,7 +52,7 @@
 #define I2C_graphical_LCD_display_H
 
 // #define WRITETHROUGH_CACHE
-#define DIY_MORE
+// #define DIY_MORE
 
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
