@@ -52,6 +52,7 @@
 #define I2C_graphical_LCD_display_H
 
 // #define WRITETHROUGH_CACHE
+// #define DIY_MORE
 
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
@@ -152,6 +153,17 @@
 
 // GPA port - these show which wires from the LCD are connected to which pins on the I/O expander
 
+#ifdef DIY_MORE
+
+#define LCD_CS1    0b00010000   // chip select 1
+#define LCD_CS2    0b00001000   // chip select 2
+#define LCD_RESET  0b00000110   // reset + backlight
+#define LCD_DATA   0b10000000   // 1xxxxxxx = data; 0xxxxxxx = instruction
+#define LCD_READ   0b01000000   // x1xxxxxx = read; x0xxxxxx = write
+#define LCD_ENABLE 0b00100000   // enable by toggling high/low
+
+#else
+
 #define LCD_CS1    0b00000100   // chip select 1  (pin 23)                            0x04
 #define LCD_CS2    0b00001000   // chip select 2  (pin 24)                            0x08
 #define LCD_RESET  0b00010000   // reset (pin 25)                                     0x10
@@ -159,6 +171,7 @@
 #define LCD_READ   0b01000000   // x1xxxxxx = read; x0xxxxxx = write  (pin 27)        0x40
 #define LCD_ENABLE 0b10000000   // enable by toggling high/low  (pin 28)              0x80
 
+#endif
 
 // Commands sent when LCD in "instruction" mode (LCD_DATA bit set to 0)
 
